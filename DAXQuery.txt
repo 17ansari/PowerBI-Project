@@ -1,0 +1,172 @@
+*** Calculated Columns ***
+-- Full Name Column (Column on Customer Table)
+Full Name = 'Customer'[First Name] & " " & 'Customer'[Last Name]
+
+-- Age Breakdown Calculation (Column on Customer Table)
+Age Bucket = 
+IF(Customer[Age] >= 61, "61+" , 
+IF(Customer[Age] >= 45 , "45-60" , 
+IF(Customer[Age] >= 30 , "30-44", "18-29" )))
+
+-- Month Year
+Month Year = FORMAT('Date'[Date], "mm-yyyy")
+
+
+-- Total Transactions (Column on Sales Territory table)
+Total Transactions = COUNTROWS(RELATEDTABLE('Internet Sales'))
+
+-- Region Volume
+Region Volume = 
+SWITCH(TRUE(),
+    [Total Transactions] >= 7000, "High Volume",
+    [Total Transactions] >= 4000, "Medium Volume",
+    [Total Transactions] >= 1, "Low Volume",
+    "NA" ) 
+
+***Optional
+-- Last Order Date (Column on Customer Table)
+Last Order Date = MAXX(RELATEDTABLE('Internet Sales'), 'Internet Sales'[Order Date])
+
+
+
+
+*** Calculated Measures ***
+
+-- Total Transactions (Measure on Internet Sales)
+Total Transactions = COUNTROWS('Internet Sales')
+
+-- Total Sales
+Total Sales = SUM('Internet Sales'[Sales Amount]) 
+
+-- Total Cost
+Total Cost = SUM('Internet Sales'[Total Product Cost])
+
+-- Profit
+Profit = [Total Sales] - [Total Cost]
+
+-- Profit Margin
+Profit Margin = DIVIDE([Profit], [Total Sales])
+
+
+
+
+
+*** Working with CALCULATE ***
+
+-- Total Sales (All Countries)
+Total Sales (All Countries) = 
+CALCULATE(
+    [Total Sales],
+    ALL('Sales Territory'[Sales Territory Country] ) ) 
+		
+
+-- Total Sales (All Countries) 
+Total Sales (All Countries) = 
+CALCULATE(
+    [Total Sales],
+    REMOVEFILTERS('Sales Territory'[Sales Territory Country] ) ) 
+
+
+-- Remove blanks
+-- Total Sales (All Countries)
+Total Sales (All Countries) = 
+IF(
+    [Total Sales] = BLANK(),
+    BLANK(),
+    CALCULATE(
+        [Total Sales],
+        ALL('Sales Territory'[Sales Territory Country] ) ) )
+
+
+--Percent of Total
+Country Percent of Total Sales = 
+DIVIDE(
+    [Total Sales],
+    [Total Sales (All Countries)] )
+
+
+*** Time Intelligence Calculations ***
+
+--To create date table, if you dataset has no date table
+Calender date table = 
+CALENDAR("01/01/2023", "31/12/2023")
+
+
+-- Year to Date Sales
+YTD Sales = 
+TOTALYTD(
+    [Total Sales],
+    'Date'[Date] )
+
+
+-- YEAR TO DATE SALES BY WEEK DAYS
+YTD Sales = 
+TOTALYTD(
+    [Total Sales],
+    'Date'[Date], 'Date'[no of week days] IN {2,3,4,5,6})
+
+
+-- Fiscal Year to Date Sales
+Fiscal YTD Sales = 
+TOTALYTD(
+    [Total Sales],
+    'Date'[Date],
+    "06/30" )
+
+
+-- Last Year Sales
+Last Year Sales = 
+CALCULATE(
+    [Total Sales],
+    SAMEPERIODLASTYEAR(
+        'Date'[Date]  ) )
+
+
+-- Last Year Profit
+Last Year Profit = 
+    CALCULATE( [Profit], 
+		SAMEPERIODLASTYEAR('Date'[Date]) 
+	)
+
+
+-- Last Month Sales
+Prior Month Sales = 
+CALCULATE(
+    [Total Sales],
+    DATEADD(
+        'Date'[Date],
+        -1, MONTH ) )
+
+
+
+
+*** Semi Additive Measures ***
+Inventory Balance = 
+SUM('Product Inventory'[Units Balance])
+
+
+Closing Balance (Last Date) = 
+CALCULATE(
+    [Inventory Balance],
+    LASTDATE( 
+        'Date'[Date] ) ) 
+
+-- Closing Balance (Non Blank)
+Closing Balance (Non Blank) = 
+CALCULATE(
+    [Inventory Balance],
+    LASTNONBLANK( 
+        'Date'[Date],
+        [Inventory Balance] ) ) 
+
+
+-- Opening Balance Month
+Opening Balance Month = 
+CALCULATE(
+    [Inventory Balance],
+    LASTNONBLANK( 
+        PARALLELPERIOD(
+            'Date'[Date],
+            -1,
+            MONTH),
+        [Inventory Balance] ) )
